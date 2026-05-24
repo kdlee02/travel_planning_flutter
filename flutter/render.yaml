@@ -29,13 +29,14 @@ services:
         sync: false
       - key: GOOGLE_API_KEY
         sync: false
-      # Filled automatically from the frontend service's public URL so
-      # CORS allows requests from it and nothing else.
+      # Filled automatically from the frontend service's hostname.
+      # api.py prepends https:// if the value has no scheme, so CORS
+      # ends up matching the real Origin header the browser sends.
       - key: FRONTEND_ORIGIN
         fromService:
           type: web
           name: seoul-buddy-web
-          property: hostport
+          property: host
 
   # ── Frontend: Flutter web as a Render Static Site ──
   # Static sites are served from Render's global CDN, so no `region` field.

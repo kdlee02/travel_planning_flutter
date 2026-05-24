@@ -61,9 +61,25 @@ app = FastAPI(title="Seoul Travel Buddy API")
 # CORS — in dev (FRONTEND_ORIGIN unset) we allow any origin so `flutter
 # run -d chrome` and similar tools work without ceremony. In prod, set
 # FRONTEND_ORIGIN to a comma-separated list of the deployed frontend URLs.
+#
+# Render's `fromService.property: host` returns a bare hostname like
+# "seoul-buddy-web.onrender.com" with no scheme. Browsers send the full
+# `https://...` form in the Origin header, so we have to normalize each
+# entry to a full origin or CORS will silently reject every request.
+def _normalize_origin(o: str) -> str:
+    o = o.strip()
+    if not o or o == "*":
+        return o
+    if "://" not in o:
+        # Render production hosts are HTTPS-only; assume https for bare hosts.
+        o = f"https://{o}"
+    # Trim any accidental trailing slash so the comparison is exact.
+    return o.rstrip("/")
+
+
 _frontend_origin = os.getenv("FRONTEND_ORIGIN", "").strip()
 _cors_origins = (
-    [o.strip() for o in _frontend_origin.split(",") if o.strip()]
+    [_normalize_origin(o) for o in _frontend_origin.split(",") if o.strip()]
     if _frontend_origin
     else ["*"]
 )
