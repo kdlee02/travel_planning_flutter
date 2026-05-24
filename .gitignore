@@ -1,0 +1,55 @@
+# ── Secrets — never commit ────────────────────────────────────────────
+.env
+**/.env
+.env.local
+**/.env.local
+
+# ── Python virtual environments ───────────────────────────────────────
+.venv/
+**/.venv/
+venv/
+**/venv/
+venv-langchain/
+**/venv-langchain/
+
+# ── Python caches / build artifacts ───────────────────────────────────
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ── Flutter / Dart build artifacts ────────────────────────────────────
+flutter/frontend/.dart_tool/
+flutter/frontend/.flutter-plugins
+flutter/frontend/.flutter-plugins-dependencies
+flutter/frontend/.packages
+flutter/frontend/build/
+flutter/frontend/coverage/
+
+# Inline Flutter SDK installed by Render's build script — cached on the
+# build server, never needs to be in the repo.
+flutter/frontend/_flutter/
+
+# ── IDE / editor noise ────────────────────────────────────────────────
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# ── macOS / OS noise ──────────────────────────────────────────────────
+.DS_Store
+**/.DS_Store
+
+# ── Notebook checkpoints ──────────────────────────────────────────────
+.ipynb_checkpoints/
+**/.ipynb_checkpoints/
+
+# ── Large local-only data (regenerable; keep prebuilt vectorstore!) ───
+# The faiss index in webapp/vectorstore/ IS committed — the backend
+# needs it at runtime and it's only ~1.7 MB.

@@ -1,0 +1,61 @@
+# Render Blueprint for Seoul Travel Buddy.
+#
+# Repo root is expected to be `webapp/` (the directory containing this
+# folder's parent). Paths below are written relative to that root.
+#
+# On first deploy:
+#   1. Push the repo to GitHub.
+#   2. In Render: New + → Blueprint → pick this repo.
+#   3. Render reads this file, creates the two services below.
+#   4. Set the secrets it asks for (GEMINI_API_KEY, GOOGLE_API_KEY).
+#   5. Wait for the build, then visit the frontend URL.
+
+services:
+  # ── Backend: FastAPI on Render's native Python runtime (no Docker) ──
+  - type: web
+    name: seoul-buddy-api
+    runtime: python
+    region: oregon        # closest free-tier US region; change if you prefer
+    plan: free            # cold starts after ~15 min idle on free tier
+    rootDir: .            # repo root (webapp/)
+    buildCommand: pip install -r flutter/backend/requirements.txt
+    startCommand: cd flutter/backend && python -m uvicorn api:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /healthz
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.4
+      # Secret — paste the same key into both fields in the Render UI.
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GOOGLE_API_KEY
+        sync: false
+      # Filled automatically from the frontend service's public URL so
+      # CORS allows requests from it and nothing else.
+      - key: FRONTEND_ORIGIN
+        fromService:
+          type: web
+          name: seoul-buddy-web
+          property: hostport
+
+  # ── Frontend: Flutter web as a Render Static Site ──
+  - type: web
+    name: seoul-buddy-web
+    runtime: static
+    region: oregon
+    rootDir: flutter/frontend
+    buildCommand: ./render-build.sh
+    staticPublishPath: build/web
+    # Send unknown URLs back to index.html so Flutter's client-side
+    # routing works (e.g. if you ever add named routes).
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      # Set at build time so the Flutter bundle bakes in the backend URL.
+      # `host` gives just the hostname; we prepend https:// in render-build.sh.
+      - key: API_BASE_HOST
+        fromService:
+          type: web
+          name: seoul-buddy-api
+          property: host
