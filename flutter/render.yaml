@@ -38,10 +38,10 @@ services:
           property: hostport
 
   # ── Frontend: Flutter web as a Render Static Site ──
+  # Static sites are served from Render's global CDN, so no `region` field.
   - type: web
     name: seoul-buddy-web
     runtime: static
-    region: oregon
     rootDir: flutter/frontend
     buildCommand: ./render-build.sh
     staticPublishPath: build/web
