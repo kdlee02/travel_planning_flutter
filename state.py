@@ -10,10 +10,14 @@ class TravelState(TypedDict, total=False):
     budget: Optional[str]           # 예산
     dietary: Optional[str]          # 식단 제약
     purpose: Optional[str]          # 가는 이유
-    current_step: str               # 현재 수집 단계: start | collecting | confirm | retrieving | planning | done
+    current_step: str               # 현재 수집 단계: start | collecting | confirm | retrieving | planning | critic | done
     confirmed: bool                 # 최종 컨펌 여부
     messages: Annotated[list, add_messages]  # 대화 히스토리 (reducer 적용)
 
     # RAG + planning
     retrieved_courses: list[dict[str, Any]]   # FAISS 검색 결과 코스 리스트
     itinerary: Optional[dict[str, Any]]       # 최종 일정 (구조화된 JSON)
+
+    # Planner → critic_repair handoff
+    planning_context: Optional[dict[str, Any]]   # requested_areas + google_supplement
+    critic_report: Optional[dict[str, Any]]      # before/after scores + repair log

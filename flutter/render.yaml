@@ -29,14 +29,15 @@ services:
         sync: false
       - key: GOOGLE_API_KEY
         sync: false
-      # Filled automatically from the frontend service's hostname.
-      # api.py prepends https:// if the value has no scheme, so CORS
-      # ends up matching the real Origin header the browser sends.
+      # Set this manually in the Render dashboard to the static-site's
+      # full URL, e.g. https://seoul-buddy-web.onrender.com .
+      #
+      # We deliberately don't use `fromService` here: Render's `host`
+      # property for cross-service references in Blueprints returns the
+      # short service name (e.g. "seoul-buddy-web") instead of the FQDN,
+      # which silently breaks CORS once deployed.
       - key: FRONTEND_ORIGIN
-        fromService:
-          type: web
-          name: seoul-buddy-web
-          property: host
+        sync: false
 
   # ── Frontend: Flutter web as a Render Static Site ──
   # Static sites are served from Render's global CDN, so no `region` field.
@@ -53,10 +54,12 @@ services:
         source: /*
         destination: /index.html
     envVars:
-      # Set at build time so the Flutter bundle bakes in the backend URL.
-      # `host` gives just the hostname; we prepend https:// in render-build.sh.
+      # Set this manually in the Render dashboard to the API service's
+      # public hostname WITHOUT scheme, e.g. seoul-buddy-api.onrender.com.
+      #
+      # We avoid `fromService` here because Render's `host` property for
+      # cross-service references in Blueprints returns the short service
+      # name (e.g. "seoul-buddy-api"), not the FQDN — that gets baked
+      # into the Flutter build and every API call fails.
       - key: API_BASE_HOST
-        fromService:
-          type: web
-          name: seoul-buddy-api
-          property: host
+        sync: false

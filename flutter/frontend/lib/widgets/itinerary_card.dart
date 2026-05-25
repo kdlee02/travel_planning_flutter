@@ -1,4 +1,10 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
+import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 import '../main.dart';
 import '../models/travel_state.dart';
 
@@ -48,6 +54,7 @@ class ItineraryCard extends StatelessWidget {
           ...itinerary.days.map((d) => _DaySection(day: d)),
           if (itinerary.sources.isNotEmpty)
             _SourcesSection(sources: itinerary.sources),
+          _DownloadButton(itinerary: itinerary),
           const SizedBox(height: 8),
         ],
       ),
@@ -387,18 +394,157 @@ class _SourcesSection extends StatelessWidget {
           const SizedBox(height: 6),
           for (final s in sources)
             Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Text(
-                '${s.source.isEmpty ? '' : '[${s.source}] '}${s.courseTitle}'
-                '${s.sourceUrl.isEmpty ? '' : '\n${s.sourceUrl}'}',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: SeoulPalette.hanNavy.withValues(alpha: 0.65),
-                  height: 1.4,
-                ),
-              ),
+              padding: const EdgeInsets.only(bottom: 6),
+              child: _SourceRow(source: s),
             ),
         ],
+      ),
+    );
+  }
+}
+
+class _SourceRow extends StatelessWidget {
+  final ItinerarySource source;
+
+  const _SourceRow({required this.source});
+
+  Future<void> _open(BuildContext context) async {
+    final url = source.sourceUrl.trim();
+    if (url.isEmpty) return;
+
+    final uri = Uri.tryParse(url);
+    if (uri == null) return;
+
+    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!ok && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not open $url')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hasUrl = source.sourceUrl.trim().isNotEmpty;
+    final label =
+        '${source.source.isEmpty ? '' : '[${source.source}] '}${source.courseTitle}';
+
+    final titleStyle = TextStyle(
+      fontSize: 12.5,
+      fontWeight: FontWeight.w600,
+      color: hasUrl
+          ? SeoulPalette.persimmon
+          : SeoulPalette.hanNavy.withValues(alpha: 0.75),
+      decoration: hasUrl ? TextDecoration.underline : TextDecoration.none,
+      decorationColor: SeoulPalette.persimmon.withValues(alpha: 0.6),
+      height: 1.4,
+    );
+
+    final row = Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(child: Text(label, style: titleStyle)),
+        if (hasUrl) ...[
+          const SizedBox(width: 6),
+          Icon(
+            Icons.open_in_new,
+            size: 14,
+            color: SeoulPalette.persimmon.withValues(alpha: 0.8),
+          ),
+        ],
+      ],
+    );
+
+    if (!hasUrl) return row;
+
+    return InkWell(
+      onTap: () => _open(context),
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: row,
+      ),
+    );
+  }
+}
+
+class _DownloadButton extends StatefulWidget {
+  final Itinerary itinerary;
+
+  const _DownloadButton({required this.itinerary});
+
+  @override
+  State<_DownloadButton> createState() => _DownloadButtonState();
+}
+
+class _DownloadButtonState extends State<_DownloadButton> {
+  bool _saving = false;
+
+  Future<void> _download() async {
+    if (_saving) return;
+    setState(() => _saving = true);
+
+    try {
+      final payload = widget.itinerary.raw.isNotEmpty
+          ? widget.itinerary.raw
+          : <String, dynamic>{
+              'summary': widget.itinerary.summary,
+            };
+
+      final encoded = const JsonEncoder.withIndent('  ').convert(payload);
+      final bytes = Uint8List.fromList(utf8.encode(encoded));
+      final stamp = DateTime.now().toIso8601String().split('T').first;
+
+      await FileSaver.instance.saveFile(
+        name: 'seoul_itinerary_$stamp',
+        bytes: bytes,
+        ext: 'json',
+        mimeType: MimeType.json,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Itinerary downloaded as JSON')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Download failed: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 4, 18, 8),
+      child: SizedBox(
+        width: double.infinity,
+        child: OutlinedButton.icon(
+          onPressed: _saving ? null : _download,
+          icon: _saving
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.download_outlined, size: 18),
+          label: Text(_saving ? 'Saving…' : 'Download itinerary (JSON)'),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: SeoulPalette.hanNavy,
+            side: BorderSide(
+              color: SeoulPalette.persimmon.withValues(alpha: 0.35),
+            ),
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -71,10 +71,16 @@ class Itinerary {
   final List<ItineraryDay> days;
   final List<ItinerarySource> sources;
 
+  /// The original JSON payload from the backend. Kept verbatim so users can
+  /// download a file that includes fields the typed model doesn't surface
+  /// (critic_report, repair_log, area_coverage, requested_areas, …).
+  final Map<String, dynamic> raw;
+
   const Itinerary({
     required this.summary,
     required this.days,
     required this.sources,
+    this.raw = const {},
   });
 
   factory Itinerary.fromJson(Map<String, dynamic> json) => Itinerary(
@@ -83,6 +89,7 @@ class Itinerary {
         sources: _asJsonList(json['sources'])
             .map(ItinerarySource.fromJson)
             .toList(),
+        raw: json,
       );
 }
 

@@ -25,6 +25,12 @@ dependencies:
   camera: ^0.12.0+1
   image_picker: ^1.2.2
 
+  # Open source URLs in the user's browser
+  url_launcher: ^6.3.0
+
+  # Save the generated itinerary as a JSON file (web/desktop/mobile)
+  file_saver: ^0.2.14
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

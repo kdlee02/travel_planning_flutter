@@ -4,6 +4,7 @@ from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
 from state import TravelState
 from planner import make_retrieve_node, plan_node
+from critic_repair import make_critic_repair_node
 from llm import set_api_key, lm_context
 
 # ---------------------------------------------------------------------------
@@ -189,6 +190,8 @@ def route_entry(state: TravelState) -> str:
         return "retrieve"
     if step == "planning":
         return "plan"
+    if step == "critic":
+        return "critic_repair"
 
     if step == "confirm":
         messages = state.get("messages", [])
@@ -214,6 +217,11 @@ def _after_retrieve(state: TravelState) -> str:
     return "plan" if state.get("current_step") == "planning" else END
 
 
+def _after_plan(state: TravelState) -> str:
+    # plan_node sets current_step="critic" when an itinerary is ready.
+    return "critic_repair" if state.get("current_step") == "critic" else END
+
+
 # ---------------------------------------------------------------------------
 # Graph builder
 # ---------------------------------------------------------------------------
@@ -236,6 +244,7 @@ def build_graph(api_key: str):
     builder.add_node("handle_confirm", handle_confirm_node)
     builder.add_node("retrieve", make_retrieve_node(api_key))
     builder.add_node("plan", plan_node)
+    builder.add_node("critic_repair", make_critic_repair_node())
 
     builder.set_conditional_entry_point(route_entry, {
         "collect": "collect",
@@ -243,6 +252,7 @@ def build_graph(api_key: str):
         "handle_confirm": "handle_confirm",
         "retrieve": "retrieve",
         "plan": "plan",
+        "critic_repair": "critic_repair",
         END: END,
     })
 
@@ -266,7 +276,13 @@ def build_graph(api_key: str):
         {"plan": "plan", END: END},
     )
 
-    builder.add_edge("plan", END)
+    builder.add_conditional_edges(
+        "plan",
+        _after_plan,
+        {"critic_repair": "critic_repair", END: END},
+    )
+
+    builder.add_edge("critic_repair", END)
 
     memory = MemorySaver()
     return builder.compile(checkpointer=memory)
